@@ -5,7 +5,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 const svg = document.querySelector('#scene')
 
 class CircleLocation {
-  constructor(center, radius, angle, scale) {
+  constructor(centerId, center, radius, angle, scale) {
+    this.centerId = centerId
     this.center = center
     this.radius = radius
     this.angle = angle
@@ -56,6 +57,8 @@ function angleFrom(center, point) {
   return (degrees + 360) % 360
 }
 
+let centers = null
+
 function buildScene() {
   const width = window.innerWidth
   const height = window.innerHeight
@@ -93,6 +96,12 @@ function buildScene() {
 
   const points = []
   const intersections = []
+  centers = {
+    c0: { x: x0, y: y0 },
+    c1: { x: x1, y: y1 },
+    c2: { x: x2, y: y2 },
+  }
+
   const pairs = [
     {
       a: { id: 'c2', x: x2, y: y2 },
@@ -145,12 +154,14 @@ function buildScene() {
             stroke: 'grey',
           })
           const locationA = new CircleLocation(
+            pair.a.id,
             { x: pair.a.x, y: pair.a.y },
             r3,
             angleFrom({ x: pair.a.x, y: pair.a.y }, position),
             scaleA
           )
           const locationB = new CircleLocation(
+            pair.b.id,
             { x: pair.b.x, y: pair.b.y },
             r4,
             angleFrom({ x: pair.b.x, y: pair.b.y }, position),
@@ -188,11 +199,19 @@ function handleIntersectionClick(hit) {
   if (isScaleOneClick) {
     const clickedColor = hit.element.getAttribute('fill')
     const isNegative = ['yellow', 'green', 'orange'].includes(clickedColor)
+    const targetCenterId = thirdCircleId(
+      hit.locationA.centerId,
+      hit.locationB.centerId
+    )
+    const targetCenter = centers?.[targetCenterId]
+    if (!targetCenter) {
+      return
+    }
 
     if (isNegative) {
-      shiftRingForCenter(hit.locationA.center, 1.15, -3)
+      shiftRingForCenter(targetCenter, 1.15, -3)
     } else {
-      shiftRingForCenter(hit.locationA.center, 0.85, 3)
+      shiftRingForCenter(targetCenter, 0.85, 3)
     }
   }
 
@@ -237,4 +256,14 @@ function shiftRingForCenter(center, scale, shiftBy) {
   for (let i = 0; i < ring.length; i++) {
     ring[i].hit.element.setAttribute('fill', rotated[i])
   }
+}
+
+function thirdCircleId(aId, bId) {
+  const all = ['c0', 'c1', 'c2']
+  for (const id of all) {
+    if (id !== aId && id !== bId) {
+      return id
+    }
+  }
+  return 'c0'
 }
