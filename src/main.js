@@ -52,7 +52,9 @@ function svgEl(tag, attrs = {}) {
 }
 
 function angleFrom(center, point) {
-  return Math.atan2(point.y - center.y, point.x - center.x)
+  const radians = Math.atan2(point.y - center.y, point.x - center.x)
+  const degrees = (radians * 180) / PI
+  return (degrees + 360) % 360
 }
 
 function toSceneCoords(event) {
