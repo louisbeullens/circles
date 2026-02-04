@@ -186,7 +186,14 @@ function handleIntersectionClick(hit) {
   const isScaleOneClick = hit.locationA.scale === 1 && hit.locationB.scale === 1
 
   if (isScaleOneClick) {
-    shiftRingForCenter(hit.locationA.center)
+    const clickedColor = hit.element.getAttribute('fill')
+    const isNegative = ['yellow', 'green', 'orange'].includes(clickedColor)
+
+    if (isNegative) {
+      shiftRingForCenter(hit.locationA.center, 1.15, -3)
+    } else {
+      shiftRingForCenter(hit.locationA.center, 0.85, 3)
+    }
   }
 
   console.log('Intersection:', {
@@ -196,18 +203,18 @@ function handleIntersectionClick(hit) {
   })
 }
 
-function shiftRingForCenter(center) {
+function shiftRingForCenter(center, scale, shiftBy) {
   const ring = intersections
     .map((hit) => {
       if (
-        hit.locationA.scale === 0.85 &&
+        hit.locationA.scale === scale &&
         hit.locationA.center.x === center.x &&
         hit.locationA.center.y === center.y
       ) {
         return { hit, angle: hit.locationA.angle }
       }
       if (
-        hit.locationB.scale === 0.85 &&
+        hit.locationB.scale === scale &&
         hit.locationB.center.x === center.x &&
         hit.locationB.center.y === center.y
       ) {
@@ -223,7 +230,6 @@ function shiftRingForCenter(center) {
   }
 
   const colors = ring.map((entry) => entry.hit.element.getAttribute('fill'))
-  const shiftBy = 3
   const rotated = ring.map(
     (_, index) => colors[(index - shiftBy + colors.length) % colors.length]
   )
