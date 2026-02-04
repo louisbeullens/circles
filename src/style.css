@@ -1,7 +1,29 @@
-canvas {
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: #f7f2e8;
+}
+
+svg {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
+}
+
+.orbit {
+  fill: none;
+  stroke: #1a1a1a;
+  stroke-width: 1.5;
+  opacity: 0.75;
+}
+
+.node {
+  stroke-width: 1;
 }
