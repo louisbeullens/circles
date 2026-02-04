@@ -102,12 +102,12 @@ function buildScene() {
     {
       a: { id: 'c1', x: x1, y: y1 },
       b: { id: 'c0', x: x0, y: y0 },
-      colors: ['red', 'orange'],
+      colors: ['orange', 'red'],
     },
     {
       a: { id: 'c0', x: x0, y: y0 },
       b: { id: 'c2', x: x2, y: y2 },
-      colors: ['blue', 'green'],
+      colors: ['green', 'blue'],
     },
   ]
 
