@@ -2,8 +2,26 @@ import './style.css'
 
 const { PI, sin, cos, sqrt, pow } = Math
 const SVG_NS = 'http://www.w3.org/2000/svg'
+const CLICK_THRESHOLD = 18
 
 const svg = document.querySelector('#scene')
+
+class CircleLocation {
+  constructor(center, radius, angle) {
+    this.center = center
+    this.radius = radius
+    this.angle = angle
+  }
+}
+
+class Intersection {
+  constructor(position, locationA, locationB, element) {
+    this.position = position
+    this.locationA = locationA
+    this.locationB = locationB
+    this.element = element
+  }
+}
 
 function rad(deg) {
   return (deg / 180) * PI
@@ -31,6 +49,22 @@ function svgEl(tag, attrs = {}) {
     el.setAttribute(key, String(value))
   }
   return el
+}
+
+function angleFrom(center, point) {
+  return Math.atan2(point.y - center.y, point.x - center.x)
+}
+
+function toSceneCoords(event) {
+  const point = svg.createSVGPoint()
+  point.x = event.clientX
+  point.y = event.clientY
+  const matrix = svg.getScreenCTM()
+  if (!matrix) {
+    return { x: 0, y: 0 }
+  }
+  const svgPoint = point.matrixTransform(matrix.inverse())
+  return { x: svgPoint.x, y: -svgPoint.y }
 }
 
 function buildScene() {
@@ -69,6 +103,7 @@ function buildScene() {
   }
 
   const points = []
+  const intersections = []
   const pairs = [
     [x2, y2, x1, y1, 'white'],
     [x1, y1, x0, y0, 'red'],
@@ -90,6 +125,18 @@ function buildScene() {
           fill: color,
           stroke: 'grey',
         })
+        const position = { x, y }
+        const locationA = new CircleLocation(
+          { x: x3, y: y3 },
+          r3,
+          angleFrom({ x: x3, y: y3 }, position)
+        )
+        const locationB = new CircleLocation(
+          { x: x4, y: y4 },
+          r4,
+          angleFrom({ x: x4, y: y4 }, position)
+        )
+        intersections.push(new Intersection(position, locationA, locationB, dot))
         points.push(dot)
         group.append(dot)
       }
@@ -97,10 +144,34 @@ function buildScene() {
   }
 
   svg.append(group)
-  return points
+  return intersections
 }
 
-buildScene()
+let intersections = buildScene()
 window.addEventListener('resize', () => {
-  buildScene()
+  intersections = buildScene()
+})
+
+svg.addEventListener('click', (event) => {
+  const { x, y } = toSceneCoords(event)
+  let closest = null
+  let closestDist = Infinity
+
+  for (const hit of intersections) {
+    const dx = x - hit.position.x
+    const dy = y - hit.position.y
+    const dist = sqrt(dx * dx + dy * dy)
+    if (dist < closestDist) {
+      closestDist = dist
+      closest = hit
+    }
+  }
+
+  if (closest && closestDist <= CLICK_THRESHOLD) {
+    console.log('Intersection:', {
+      position: closest.position,
+      locationA: closest.locationA,
+      locationB: closest.locationB,
+    })
+  }
 })
