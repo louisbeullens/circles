@@ -2,15 +2,14 @@ import './style.css'
 
 const { PI, sin, cos, sqrt, pow } = Math
 const SVG_NS = 'http://www.w3.org/2000/svg'
-const CLICK_THRESHOLD = 18
-
 const svg = document.querySelector('#scene')
 
 class CircleLocation {
-  constructor(center, radius, angle) {
+  constructor(center, radius, angle, scale) {
     this.center = center
     this.radius = radius
     this.angle = angle
+    this.scale = scale
   }
 }
 
@@ -57,18 +56,6 @@ function angleFrom(center, point) {
   return (degrees + 360) % 360
 }
 
-function toSceneCoords(event) {
-  const point = svg.createSVGPoint()
-  point.x = event.clientX
-  point.y = event.clientY
-  const matrix = svg.getScreenCTM()
-  if (!matrix) {
-    return { x: 0, y: 0 }
-  }
-  const svgPoint = point.matrixTransform(matrix.inverse())
-  return { x: svgPoint.x, y: -svgPoint.y }
-}
-
 function buildScene() {
   const width = window.innerWidth
   const height = window.innerHeight
@@ -107,40 +94,81 @@ function buildScene() {
   const points = []
   const intersections = []
   const pairs = [
-    [x2, y2, x1, y1, 'white'],
-    [x1, y1, x0, y0, 'red'],
-    [x0, y0, x2, y2, 'blue'],
-    [x0, y0, x1, y1, 'orange'],
-    [x2, y2, x0, y0, 'green'],
-    [x1, y1, x2, y2, 'yellow'],
+    {
+      a: { id: 'c2', x: x2, y: y2 },
+      b: { id: 'c1', x: x1, y: y1 },
+      colors: ['white', 'yellow'],
+    },
+    {
+      a: { id: 'c1', x: x1, y: y1 },
+      b: { id: 'c0', x: x0, y: y0 },
+      colors: ['red', 'orange'],
+    },
+    {
+      a: { id: 'c0', x: x0, y: y0 },
+      b: { id: 'c2', x: x2, y: y2 },
+      colors: ['blue', 'green'],
+    },
   ]
 
-  for (const [x3, y3, x4, y4, color] of pairs) {
-    for (const r3 of scales.map((s) => r * s)) {
-      for (const r4 of scales.map((s) => r * s)) {
-        const [x, y] = intersect(x3, y3, r3, x4, y4, r4)
-        const dot = svgEl('circle', {
-          cx: x,
-          cy: y,
-          r: 10,
-          class: 'node',
-          fill: color,
-          stroke: 'grey',
-        })
-        const position = { x, y }
-        const locationA = new CircleLocation(
-          { x: x3, y: y3 },
+  for (const pair of pairs) {
+    for (let i = 0; i < scales.length; i++) {
+      for (let j = 0; j < scales.length; j++) {
+        const scaleA = scales[i]
+        const scaleB = scales[j]
+        const r3 = r * scaleA
+        const r4 = r * scaleB
+        const [x1, y1, x2, y2] = intersect(
+          pair.a.x,
+          pair.a.y,
           r3,
-          angleFrom({ x: x3, y: y3 }, position)
+          pair.b.x,
+          pair.b.y,
+          r4
         )
-        const locationB = new CircleLocation(
-          { x: x4, y: y4 },
-          r4,
-          angleFrom({ x: x4, y: y4 }, position)
+        const intersectionsForPair = [
+          { x: x1, y: y1 },
+          { x: x2, y: y2 },
+        ].sort(
+          (p, q) =>
+            angleFrom({ x: 0, y: 0 }, p) - angleFrom({ x: 0, y: 0 }, q)
         )
-        intersections.push(new Intersection(position, locationA, locationB, dot))
-        points.push(dot)
-        group.append(dot)
+
+        for (let k = 0; k < intersectionsForPair.length; k++) {
+          const position = intersectionsForPair[k]
+          const dot = svgEl('circle', {
+            cx: position.x,
+            cy: position.y,
+            r: 10,
+            class: 'node',
+            fill: pair.colors[k],
+            stroke: 'grey',
+          })
+          const locationA = new CircleLocation(
+            { x: pair.a.x, y: pair.a.y },
+            r3,
+            angleFrom({ x: pair.a.x, y: pair.a.y }, position),
+            scaleA
+          )
+          const locationB = new CircleLocation(
+            { x: pair.b.x, y: pair.b.y },
+            r4,
+            angleFrom({ x: pair.b.x, y: pair.b.y }, position),
+            scaleB
+          )
+          const ordered = [pair.a.id, pair.b.id].sort()
+          const hit =
+            pair.a.id === ordered[0]
+              ? new Intersection(position, locationA, locationB, dot)
+              : new Intersection(position, locationB, locationA, dot)
+          intersections.push(hit)
+          dot.addEventListener('click', (event) => {
+            event.stopPropagation()
+            handleIntersectionClick(hit)
+          })
+          points.push(dot)
+          group.append(dot)
+        }
       }
     }
   }
@@ -154,26 +182,53 @@ window.addEventListener('resize', () => {
   intersections = buildScene()
 })
 
-svg.addEventListener('click', (event) => {
-  const { x, y } = toSceneCoords(event)
-  let closest = null
-  let closestDist = Infinity
+function handleIntersectionClick(hit) {
+  const isScaleOneClick = hit.locationA.scale === 1 && hit.locationB.scale === 1
 
-  for (const hit of intersections) {
-    const dx = x - hit.position.x
-    const dy = y - hit.position.y
-    const dist = sqrt(dx * dx + dy * dy)
-    if (dist < closestDist) {
-      closestDist = dist
-      closest = hit
-    }
+  if (isScaleOneClick) {
+    shiftRingForCenter(hit.locationA.center)
   }
 
-  if (closest && closestDist <= CLICK_THRESHOLD) {
-    console.log('Intersection:', {
-      position: closest.position,
-      locationA: closest.locationA,
-      locationB: closest.locationB,
+  console.log('Intersection:', {
+    position: hit.position,
+    locationA: hit.locationA,
+    locationB: hit.locationB,
+  })
+}
+
+function shiftRingForCenter(center) {
+  const ring = intersections
+    .map((hit) => {
+      if (
+        hit.locationA.scale === 0.85 &&
+        hit.locationA.center.x === center.x &&
+        hit.locationA.center.y === center.y
+      ) {
+        return { hit, angle: hit.locationA.angle }
+      }
+      if (
+        hit.locationB.scale === 0.85 &&
+        hit.locationB.center.x === center.x &&
+        hit.locationB.center.y === center.y
+      ) {
+        return { hit, angle: hit.locationB.angle }
+      }
+      return null
     })
+    .filter(Boolean)
+    .sort((a, b) => a.angle - b.angle)
+
+  if (ring.length === 0) {
+    return
   }
-})
+
+  const colors = ring.map((entry) => entry.hit.element.getAttribute('fill'))
+  const shiftBy = 3
+  const rotated = ring.map(
+    (_, index) => colors[(index - shiftBy + colors.length) % colors.length]
+  )
+
+  for (let i = 0; i < ring.length; i++) {
+    ring[i].hit.element.setAttribute('fill', rotated[i])
+  }
+}
