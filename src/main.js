@@ -209,9 +209,9 @@ function handleIntersectionClick(hit) {
     }
 
     if (isNegative) {
-      shiftRingForCenter(targetCenter, 1.15, -3)
+      shiftRingForCenter(targetCenter, 1.15, 3)
     } else {
-      shiftRingForCenter(targetCenter, 0.85, 3)
+      shiftRingForCenter(targetCenter, 0.85, -3)
     }
   }
 
