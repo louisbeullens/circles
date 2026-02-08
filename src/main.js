@@ -1,12 +1,14 @@
 import './style.css'
 
 const { abs, atan2, cos, pow, sign, sin, sqrt, PI } = Math
-
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-const search = new URLSearchParams(window.location.search)
-const globalFaceRotation = abs(search.get('faceRotation') ?? 1)
-const globalFaceDirection = sign(search.get('faceRotation') ?? 1)
+const url = new URL(window.location.href)
+url.searchParams.set('faceRotation', url.searchParams.get('faceRotation') ?? '1')
+const globalFaceRotation = abs(url.searchParams.get('faceRotation') ?? '1')
+const globalFaceDirection = sign(url.searchParams.get('faceRotation') ?? '1')
+const colorList = atob(url.searchParams.get('nodes') ?? '').split(',')
+window.history.replaceState({}, '', url.href)
 
 function resize() {
     const width = window.innerWidth
@@ -51,16 +53,16 @@ const faceMapping = {
     0.85: {
         0.85: [[0, -1], [1, 1]],
         1: [[0, -1], [0, 1]],
-        1.15: [[1, 1], [0,  1]],
+        1.15: [[1, 1], [0, 1]],
     },
     1: {
-        0.85: [[1, -1], [1,  1]],
-        1.15: [[1, 1], [1,  -1]],
+        0.85: [[1, -1], [1, 1]],
+        1.15: [[1, 1], [1, -1]],
     },
     1.15: {
-        0.85: [[1, -1], [0,  -1]],
-        1: [[0,  1], [0,  -1]],
-        1.15: [[0,  1], [1,  -1]],
+        0.85: [[1, -1], [0, -1]],
+        1: [[0, 1], [0, -1]],
+        1.15: [[0, 1], [1, -1]],
     },
 }
 
@@ -98,6 +100,25 @@ function sliceRotate(slice, direction, speed = 3) {
     }
 
     return sliceNodes
+}
+
+function score(node) {
+    return 15 * node.locations[0].center + 
+    5 * node.locations[1].center + 
+    3 * node.locations[0].scale + 
+    node.locations[1].scale 
+}
+
+function sortNodes() {
+    nodes.sort((a,b) => score(a) - score(b))
+}
+
+function changeUrl() {
+    sortNodes()
+    const colors = nodes.map(({ color }) => color).join(',')
+    const base64 = btoa(colors)
+    url.searchParams.set('nodes', base64)
+    window.history.replaceState(null, '', url.href)
 }
 
 class Node {
@@ -181,6 +202,8 @@ class Node {
             }
             stagedNodes.forEach(node => node.locations = node.stage)
         }
+
+        changeUrl()
     }
 }
 
@@ -211,19 +234,21 @@ for (const { cx, cy } of centers) {
     }
 }
 
-for (const [c0, c1, color] of [
-    [0, 2, 'blue'],
-    [2, 0, 'green'],
-
-    [2, 1, 'white'],
-    [1, 2, 'yellow'],
-
-    [1, 0, 'red'],
-    [0, 1, 'orange'],
-]) {
-    for (const s0 of scales) {
-        for (const s1 of scales) {
-            new Node(circle(c0, s0), circle(c1, s1), color)
+{
+    let i=0
+    for (const [c0, c1, color] of [
+        [0, 1, 'orange'],
+        [0, 2, 'blue'],
+        [1, 0, 'red'],
+        [1, 2, 'yellow'],
+        [2, 0, 'green'],
+        [2, 1, 'white'],
+    ]) {
+        for (const s0 of scales) {
+            for (const s1 of scales) {
+                new Node(circle(c0, s0), circle(c1, s1), colorList[i] || color)
+                i++
+            }
         }
     }
 }
