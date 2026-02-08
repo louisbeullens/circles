@@ -1,8 +1,12 @@
 import './style.css'
 
-const { atan2, cos, pow, sign, sin, sqrt, PI } = Math
+const { abs, atan2, cos, pow, sign, sin, sqrt, PI } = Math
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
+
+const search = new URLSearchParams(window.location.search)
+const globalFaceRotation = abs(search.get('faceRotation') ?? 1)
+const globalFaceDirection = sign(search.get('faceRotation') ?? 1)
 
 function resize() {
     const width = window.innerWidth
@@ -118,7 +122,6 @@ class Node {
         )
         locations[circle0.center][circle0.scale].push(this.locations[0])
         locations[circle1.center][circle1.scale].push(this.locations[1])
-        locations.push(...this.locations)
         const element = this.element = svg('circle', { cx: x, cy: y, r: 6, fill: color, class: 'node' })
         element.addEventListener('click', this.clickHandler.bind(this, 1))
         element.addEventListener('contextmenu', this.clickHandler.bind(this, -1))
@@ -164,9 +167,8 @@ class Node {
         slicesNodes.forEach(node => node.locations = node.stage)
 
         const faceNodes = nodes.filter(({ locations }) => locations[0].center === this.locations[0].center && locations[1].center === this.locations[1].center)
-        console.log(faceNodes)
-        faceDirection = faceDirection === 1 ? 0 : 1
-        for (let i = 0; i < 2; i++) {
+        faceDirection = faceDirection * globalFaceDirection === 1 ? 0 : 1
+        for (let i = 0; i < 2 * globalFaceRotation; i++) {
             const stagedNodes = []
             for (const node of faceNodes) {
                 if (node.locations[0].scale === 1 && node.locations[1].scale === 1) {
@@ -175,7 +177,7 @@ class Node {
                 const params = faceMapping[node.locations[0].scale][node.locations[1].scale][faceDirection]
                 const srcLocation = node.locations[params[0]]
                 const slice = [srcLocation]
-                stagedNodes.push(...sliceRotate(slice, params[1], 0.7))
+                stagedNodes.push(...sliceRotate(slice, params[1], 0.7 * globalFaceRotation))
             }
             stagedNodes.forEach(node => node.locations = node.stage)
         }
