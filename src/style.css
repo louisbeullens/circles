@@ -1,29 +1,17 @@
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  background: #f7f2e8;
-}
-
 svg {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
+  background-color:antiquewhite;
+}
+
+.orbit, .node {
+  stroke: black;
+  stroke-width: 1;
 }
 
 .orbit {
   fill: none;
-  stroke: #1a1a1a;
-  stroke-width: 1.5;
-  opacity: 0.75;
-}
-
-.node {
-  stroke-width: 1;
 }
