@@ -7,7 +7,7 @@ const url = new URL(window.location.href)
 url.searchParams.set('faceRotation', url.searchParams.get('faceRotation') ?? '1')
 const globalFaceRotation = abs(url.searchParams.get('faceRotation') ?? '1')
 const globalFaceDirection = sign(url.searchParams.get('faceRotation') ?? '1')
-const colorList = atob(url.searchParams.get('nodes') ?? '').split(',')
+const colorList = atob((url.hash ?? '').slice(1)).split(',')
 window.history.replaceState({}, '', url.href)
 
 function resize() {
@@ -117,7 +117,7 @@ function changeUrl() {
     sortNodes()
     const colors = nodes.map(({ color }) => color).join(',')
     const base64 = btoa(colors)
-    url.searchParams.set('nodes', base64)
+    url.hash = base64
     window.history.replaceState(null, '', url.href)
 }
 
